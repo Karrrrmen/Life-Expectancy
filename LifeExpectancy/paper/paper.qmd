@@ -1,0 +1,269 @@
+---
+title: "Life Expectancy..."
+subtitle: "  "
+author: 
+  - Karmen Zhu, Edan Wong, Saanvi Prasanth
+thanks: "Code and data are available at: _______"
+date: 30 September 2024
+date-format: long
+abstract: "  "
+format: pdf
+number-sections: true
+bibliography: references.bib
+---
+
+```{r}
+#| include: false
+#| warning: false
+#| message: false
+
+library(tidyverse)
+data <- LifeExpectancyData
+# Rename the column using colnames()
+colnames(data)[colnames(data) == "Life expectancy"] <- "LifeExpectancy"
+colnames(data)[colnames(data) == "Income composition of resources"] <- "IncomeComposition"
+#data <- read.csv('~/STA302-group55/LifeExpectancy/LifeExpectancy/data/raw_data')
+```
+
+
+# Introduction
+
+
+
+# Data {#sec-data}
+
+## Raw Data {#sec-first-point}
+The data used in this paper is access in from Open Data Toronto and the particular data set used was the Daily Shelter & Overnight Service Occupancy & Capacity (@opendatatoronto). To analysis the data and creating graphs using the data, following package that was build in the (R program @citeR) was used: tidyverse (@tidyverse), dplyr (@dplyr), lubridate (@lubridate), and ggplot2 (@ggplot2). We clean the column names, separate the date into `year` and `month`, and create a standardized date column for monthly aggregation. The cleaned data is then saved for further analysis.
+
+```{r}
+# Randomly select 10 rows from the data
+sampled_data <- data |> sample_n(10)
+
+# Display the selected data
+sampled_data
+```
+
+## Limitation of Data
+
+
+
+# Results {#sec-mydatasection}
+
+## Response variable(Life Expectancy)
+```{r}
+#| label: fig-response-variable
+#| fig-cap: false
+#| echo: false
+
+morandi_hist <- rgb(0.2, 0.0, 0.0, 0.4)
+  hist(data$LifeExpectancy,
+     main = "Distribution of Life Expectancy",
+     xlab = "Life Expectancy",
+     col = morandi_hist,
+     breaks = 10)
+```
+(explain why it fits linear regression, normality)
+
+
+```{r}
+#| label: fig-responsepredictor-plots
+#| fig-cap: Visualizing the Relationship Between Life Expectancy and Its Predictors
+#| echo: false
+
+par(mfrow = c(2, 3))
+
+# 1. Life Expectancy VS GDP plot
+morandi_color_gdp <- rgb(0.4, 0.6, 0.4, 0.4)
+plot(data$GDP, data$LifeExpectancy, 
+     main = "Life Expectancy VS GDP", 
+     xlab = "GDP", 
+     ylab = "Life Expectancy",
+     col = morandi_color_gdp,
+     pch = 19,
+     cex = 0.5)
+# Add the regression line in red
+abline(149.7477, 0.2592, col = "red", lty = 2)
+
+# 2. Life Expectancy VS Polio Immunization Coverage plot
+morandi_color_polio <- rgb(0.8, 0.6, 0.6, 0.4)
+plot(data$Polio, data$LifeExpectancy, 
+     main = "VS Polio Immunization Coverage", 
+     xlab = "Polio", 
+     ylab = "Life Expectancy",
+     col = morandi_color_polio,
+     pch = 19,
+     cex = 0.5)
+# Add the regression line in red
+abline(149.7477, 0.2592, col = "red", lwd = 2)
+
+# 3. Life Expectancy VS Diphtheria Immunization Coverage plot
+morandi_color_diphtheria <- rgb(0.6, 0.8, 0.8, 0.4)
+plot(data$Diphtheria, data$LifeExpectancy, 
+     main = "VS Diphtheria Immunization Coverage", 
+     xlab = "Diphtheria", 
+     ylab = "Life Expectancy",
+     col = morandi_color_diphtheria,
+     pch = 19,
+     cex = 0.5)
+# Add the regression line in red
+abline(149.7477, 0.2592, col = "red", lwd = 2)
+
+# 4. Linear Model for Life Expectancy by Developed/Developing Status
+# Create dummy variables for species
+StatusDeveloped = as.integer(data["Status"] == "Developed")
+StatusDeveloping = as.integer(data["Status"] == "Developing")
+
+df_subsetted = data[, c(3, 4)]
+df_converted = data.frame(df_subsetted, StatusDeveloped, StatusDeveloping)
+fit_manually = lm(LifeExpectancy ~ StatusDeveloped + StatusDeveloping, data = df_converted)
+summary(fit_manually)
+
+# 5. Life Expectancy VS Income Composition of Resources plot
+morandi_color_income <- rgb(0.6, 0.6, 0.8, 0.4)
+plot(data$IncomeComposition, data$LifeExpectancy, 
+     main = "VS Income Composition of Resources", 
+     xlab = "Income Composition of Resources", 
+     ylab = "Life Expectancy",
+     col = morandi_color_income,
+     pch = 19,
+     cex = 0.5)
+# Add the regression line in red
+abline(149.7477, 0.2592, col = "red", lty = 2)
+
+# Reset layout back to normal (1 plot per page)
+par(mfrow = c(1, 1))
+
+```
+
+
+
+```{r}
+#| label: fig-TotalExpenditure
+#| fig-cap: Preliminary Model using the Predictors
+#| echo: false
+fit = lm(LifeExpectancy ~  GDP + Polio + Diphtheria + Status + IncomeComposition, data=data)
+fit
+```
+```{r}
+#| label: fig-cor-matrix
+#| fig-cap: Correlation Matrix
+#| echo: false
+# Convert Status to a numeric variable
+data$Status <- as.numeric(factor(data$Status))
+
+cor_data <- data[, c("LifeExpectancy", "GDP", "Polio", "Diphtheria", "Status", "IncomeComposition")]
+# correlation matrix
+cor_matrix <- cor(cor_data, use = "complete.obs")
+print(cor_matrix)
+```
+```{r}
+#| label: fig-cor-plot
+#| fig-cap: Correlation Plot
+#| echo: false
+
+library(PerformanceAnalytics)
+library(dplyr)
+cor_data <- data[, c("LifeExpectancy", "GDP", "Polio", "Diphtheria", "IncomeComposition")]
+chart.Correlation(cor_data, histogram = TRUE, pch = 19)
+```
+
+```{r}
+#| label: fig-residual-fitted
+#| fig-cap:false
+#| echo: false
+morandi_residual_fitted <- rgb(1.0, 0.8, 0.4, 0.4)
+plot(fit$fitted.values, fit$residuals,
+     main = "Residuals vs Fitted",
+     xlab = "Fitted values",
+     ylab = "Residuals",
+     pch = 19, col = morandi_residual_fitted)
+abline(h = 0, col = "red", lty = 2)
+```
+
+
+```{r}
+#| label: fig-TotalExpenditure
+#| fig-cap: Partial Residual Plots
+#| echo: false
+
+library(car)
+fitted <- lm(LifeExpectancy ~ GDP + Polio + Diphtheria + IncomeComposition, data = data)
+crPlots(fitted, smooth = list(span = 0.8))  # 'span' is for stability
+```
+
+
+
+```{r}
+#| label: fig-qq
+#| fig-cap: false
+#| echo: false
+
+morandi_qq <- rgb(0.4, 0.2, 0.2, 0.4)
+qqnorm(fit$residuals, main = "Q-Q Plot of Residuals", col = morandi_qq)
+qqline(fit$residuals, col = "red", lty = 2)
+```
+```{r}
+#| label: fig-scale-location
+#| fig-cap: Scale-Location: Standardized Residuals vs Fitted Values
+#| echo: false
+
+morandi_scale <- rgb(0.0, 0.4, 1.0, 0.4)
+standardized_residuals <- rstandard(fit)
+plot(fit$fitted.values, sqrt(abs(standardized_residuals)),
+     main = "Scale-Location",
+     xlab = "Fitted Values",
+     ylab = "√|Standardized Residuals|",
+     pch = 19, col = morandi_scale)
+
+# Add a smoothing line to check for patterns
+lines(lowess(fit$fitted.values, sqrt(abs(standardized_residuals))), col = 'red', lwd = 2)
+```
+
+
+```{r}
+#| label: fig-leverage
+#| fig-cap: Scale-Location: Standardized Residuals vs Fitted Values
+#| echo: false
+
+morandi_leverag <- rgb(0.6, 0.2, 0.0, 0.4)
+plot(fit, which = 5, main = "Residuals vs Leverage Plot", col = morandi_leverag)
+```
+
+\newpage
+
+# Discussion
+
+## First discussion point
+From the visualizations (@fig-beds-status), 
+
+## Second discussion point
+As shown in the graph (@fig-service-type), 
+
+## Third discussion point
+From(@fig-homeless-groups), 
+
+
+## Weaknesses and next steps
+
+
+# Conclusion
+
+
+
+\newpage
+
+\appendix
+
+# Appendix {-}
+
+
+# Additional data details
+
+
+
+\newpage
+
+
+# References
+
+
